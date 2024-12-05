@@ -1,0 +1,71 @@
+import 'dart:convert';
+import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
+
+void main() => runApp(MyApp());
+
+class MyApp extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      title: 'Transport Schedule',
+      home: SchedulePage(),
+    );
+  }
+}
+
+class SchedulePage extends StatelessWidget {
+  final String apiUrl = 'Insert your API URL here'; 
+
+  Future<List<Schedule>> fetchSchedules() async {
+    final response = await http.get(Uri.parse(apiUrl));
+    if (response.statusCode == 200) {
+      List jsonResponse = json.decode(response.body);
+      return jsonResponse.map((schedule) => Schedule.fromJson(schedule)).toList();
+    } else {
+      throw Exception('Failed to load schedules');
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: Text('Transport Schedule')),
+      body: FutureBuilder<List<Schedule>>(
+        future: fetchSchedules(),
+      builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return Center(child: CircularProgressIndicator());
+          } else if (snapshot.hasError) {
+            return Center(child: Text('Error: ${snapshot.error}'));
+          } else {
+            final schedules = snapshot.data!;
+            return ListView.builder(
+              itemCount: schedules.length,
+              itemBuilder: (context, index) {
+                return ListTile(
+                  title: Text(schedules[index].route),
+                  subtitle: Text(schedules[index].time),
+                );
+              },
+            );
+          }
+      }
+  ),
+    );
+  }
+}
+
+class Schedule {
+  final String route;
+  final String time;
+
+  Schedule({required this.route, required this.time});
+
+  factory Schedule.fromJson(Map<String, dynamic> json) {
+    return Schedule(
+      route: json['route'],
+      time: json['time'],
+    );
+  }
+}
